@@ -1,13 +1,14 @@
 "use client";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface ActivityItem {
   id: number;
   crop: string;
   disease: string;
-  severity: "Low" | "Medium" | "High";
+  severity: "low" | "medium" | "high";
   date: string;
   status: "Treated" | "Monitoring" | "Action Required";
 }
@@ -20,13 +21,6 @@ interface Alert {
 }
 
 /* ─── Static Data ────────────────────────────────────────── */
-const recentActivity: ActivityItem[] = [
-  { id: 1, crop: "Tomato",   disease: "Early Blight",      severity: "Medium", date: "28 Mar 2026", status: "Treating" as any },
-  { id: 2, crop: "Rice",     disease: "Bacterial Leaf Blight", severity: "High",   date: "26 Mar 2026", status: "Action Required" },
-  { id: 3, crop: "Maize",    disease: "No Disease Detected", severity: "Low",  date: "24 Mar 2026", status: "Monitoring" },
-  { id: 4, crop: "Groundnut", disease: "Leaf Spot",          severity: "Low",   date: "21 Mar 2026", status: "Treated" },
-];
-
 const alerts: Alert[] = [
   { id: 1, type: "warning", message: "Heavy rainfall expected in your region tomorrow.", time: "2 hrs ago" },
   { id: 2, type: "danger",  message: "High disease risk detected for Rice crops this week.", time: "5 hrs ago" },
@@ -78,9 +72,9 @@ const quickActions = [
 /* ─── Severity Badge ─────────────────────────────────────── */
 function SeverityBadge({ severity }: { severity: ActivityItem["severity"] }) {
   const map = {
-    Low:    "bg-green-100 text-green-700 border-green-200",
-    Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    High:   "bg-red-100 text-red-700 border-red-200",
+    low:    "bg-green-100 text-green-700 border-green-200",
+    medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    high:   "bg-red-100 text-red-700 border-red-200",
   };
   return (
     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${map[severity]}`}
@@ -130,21 +124,121 @@ function AlertIcon({ type }: { type: Alert["type"] }) {
   );
 }
 
+/* ─── Shimmer base class ─────────────────────────────────── */
+const shimmer = "animate-pulse bg-green-100 rounded-xl";
+
+/* ═══════════════════════════════════════════════════════════
+   SKELETON: Weather Card
+═══════════════════════════════════════════════════════════ */
+function WeatherSkeleton() {
+  return (
+    <div className="h-full bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6 space-y-5">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className={`${shimmer} h-3 w-24`} />
+          <div className={`${shimmer} h-3 w-32`} />
+        </div>
+        <div className={`${shimmer} w-10 h-10 rounded-2xl`} />
+      </div>
+
+      {/* Temp + condition */}
+      <div className="flex items-end gap-3">
+        <div className={`${shimmer} h-16 w-24 rounded-2xl`} />
+        <div className="pb-2 space-y-2">
+          <div className={`${shimmer} h-4 w-28`} />
+          <div className={`${shimmer} h-3 w-20`} />
+        </div>
+      </div>
+
+      {/* Stat tiles */}
+      <div className="grid grid-cols-3 gap-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="bg-[#f3f8f3] rounded-2xl p-3 border border-green-100 space-y-2 flex flex-col items-center">
+            <div className={`${shimmer} w-7 h-7 rounded-lg`} />
+            <div className={`${shimmer} h-3.5 w-12`} />
+            <div className={`${shimmer} h-2.5 w-10`} />
+          </div>
+        ))}
+      </div>
+
+      {/* Alert strip */}
+      <div className={`${shimmer} h-10 w-full rounded-2xl`} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SKELETON: Reports Table Row
+═══════════════════════════════════════════════════════════ */
+function TableRowSkeleton() {
+  return (
+    <>
+      {/* Desktop */}
+      <div className="hidden sm:grid grid-cols-4 items-center px-3 py-3 rounded-2xl gap-2">
+        <div className="flex items-center gap-2">
+          <div className={`${shimmer} w-7 h-7 rounded-lg shrink-0`} />
+          <div className="space-y-1.5">
+            <div className={`${shimmer} h-3.5 w-16`} />
+            <div className={`${shimmer} h-2.5 w-12`} />
+          </div>
+        </div>
+        <div className={`${shimmer} h-3.5 w-28`} />
+        <div className={`${shimmer} h-5 w-14 rounded-full`} />
+        <div className={`${shimmer} h-5 w-20 rounded-lg`} />
+      </div>
+
+      {/* Mobile */}
+      <div className="sm:hidden rounded-2xl border border-green-50 bg-[#fafffe] p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className={`${shimmer} h-4 w-20`} />
+          <div className={`${shimmer} h-5 w-14 rounded-full`} />
+        </div>
+        <div className={`${shimmer} h-3.5 w-36`} />
+        <div className="flex items-center justify-between">
+          <div className={`${shimmer} h-5 w-20 rounded-lg`} />
+          <div className={`${shimmer} h-3 w-16`} />
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ─── Fade-up variant ────────────────────────────────────── */
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 28 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay, ease: "easeOut" as const},
+  transition: { duration: 0.5, delay, ease: "easeOut" as const },
 });
 
 /* ═══════════════════════════════════════════════════════════
    DASHBOARD PAGE
 ═══════════════════════════════════════════════════════════ */
 export default function DashboardPage() {
+  const [reports, setReports]   = useState<any[]>([]);
+  const [weather, setWeather]   = useState<any>(null);
+  const [loadingWeather, setLoadingWeather] = useState(true);
+  const [loadingReports, setLoadingReports] = useState(true);
+
+  useEffect(() => {
+    // Fetch weather independently so each card shows its own skeleton
+    fetch("/api/weather")
+      .then((r) => r.json())
+      .then((data) => setWeather(data))
+      .catch((err) => console.error("Weather fetch failed:", err))
+      .finally(() => setLoadingWeather(false));
+
+    fetch("/api/reports")
+      .then((r) => r.json())
+      .then((data) => setReports(data.slice(0, 4)))
+      .catch((err) => console.error("Reports fetch failed:", err))
+      .finally(() => setLoadingReports(false));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f3f8f3] pt-20" style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
-      {/* ── subtle grid bg ── */}
+      {/* subtle grid bg */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.025]"
         style={{
           backgroundImage: "linear-gradient(#166534 1px,transparent 1px),linear-gradient(90deg,#166534 1px,transparent 1px)",
@@ -157,11 +251,9 @@ export default function DashboardPage() {
             1. WELCOME HERO
         ════════════════════════════════════ */}
         <motion.div {...fadeUp(0)}>
-          <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#14532d] via-[#166534] to-[#365314] p-6 sm:p-10 shadow-xl shadow-green-900/20">
-            {/* blobs */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#14532d] via-[#166534] to-[#365314] p-6 sm:p-10 shadow-xl shadow-green-900/20">
             <div className="absolute -top-12 -right-12 w-56 h-56 bg-lime-400/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-green-300/10 rounded-full blur-3xl pointer-events-none" />
-            {/* dot grid */}
             <div className="absolute inset-0 opacity-[0.07] pointer-events-none"
               style={{ backgroundImage: "radial-gradient(circle,#fff 1px,transparent 1px)", backgroundSize: "22px 22px" }} />
 
@@ -179,12 +271,10 @@ export default function DashboardPage() {
                   Here's what's happening on your farm today. Stay ahead with AI-powered insights.
                 </p>
               </div>
-
-              {/* mini date/season chip */}
               <div className="shrink-0 flex flex-col items-start sm:items-end gap-2">
                 <div className="bg-white/10 border border-white/20 backdrop-blur rounded-2xl px-5 py-3 text-right">
                   <p className="text-xs text-green-300/70 mb-0.5">Today</p>
-                  <p className="text-white font-bold text-base">Sunday, 29 Mar 2026</p>
+                  <p className="text-white font-bold text-base">Sunday, 5 April 2026</p>
                   <p className="text-lime-300 text-sm font-medium mt-0.5">🌱 Rabi Season</p>
                 </div>
               </div>
@@ -197,52 +287,56 @@ export default function DashboardPage() {
         ════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-          {/* Weather Card – spans 2 cols */}
+          {/* ── Weather Card ── */}
           <motion.div {...fadeUp(0.08)} className="lg:col-span-2">
-            <div className="h-full bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">Weather Today</p>
-                  <p className="text-sm text-green-900/50">Vengavasal, Tamil Nadu</p>
-                </div>
-                <span className="text-4xl select-none">⛅</span>
-              </div>
-
-              <div className="flex items-end gap-3">
-                <span className="text-6xl font-black text-[#0f3d1a]" style={{ fontFamily: "'Syne', sans-serif" }}>
-                  34°
-                </span>
-                <div className="pb-2">
-                  <p className="text-base font-semibold text-green-800">Partly Cloudy</p>
-                  <p className="text-sm text-green-700/50">Feels like 37°C</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Humidity", value: "72%",    icon: "💧" },
-                  { label: "Rainfall", value: "12 mm",  icon: "🌧️" },
-                  { label: "Wind",     value: "14 km/h", icon: "🌬️" },
-                ].map((w) => (
-                  <div key={w.label}
-                    className="bg-[#f3f8f3] rounded-2xl p-3 text-center border border-green-100">
-                    <div className="text-xl mb-1 select-none">{w.icon}</div>
-                    <p className="text-sm font-bold text-[#0f3d1a]">{w.value}</p>
-                    <p className="text-xs text-green-700/50 mt-0.5">{w.label}</p>
+            {loadingWeather ? (
+              <WeatherSkeleton />
+            ) : (
+              <div className="h-full bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">Weather Today</p>
+                    <p className="text-sm text-green-900/50">{weather?.city}</p>
                   </div>
-                ))}
-              </div>
+                  <span className="text-4xl select-none">⛅</span>
+                </div>
 
-              <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 flex items-center gap-2">
-                <span className="text-lg select-none">⚠️</span>
-                <p className="text-xs font-medium text-amber-800">
-                  Heavy rain expected tomorrow — plan field operations early.
-                </p>
+                <div className="flex items-end gap-3">
+                  <span className="text-6xl font-black text-[#0f3d1a]" style={{ fontFamily: "'Syne', sans-serif" }}>
+                    {weather?.current?.temperature}
+                  </span>
+                  <div className="pb-2">
+                    <p className="text-base font-semibold text-green-800">{weather?.current?.condition}</p>
+                    <p className="text-sm text-green-700/50">Feels like {weather?.current?.feelsLike}°C</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: "Humidity", value: `${weather?.current?.humidity} %`,  icon: "💧" },
+                    { label: "Rainfall", value: `${weather?.current?.rainfall} mm`, icon: "🌧️" },
+                    { label: "Wind",     value: `${weather?.current?.wind} km/h`,   icon: "🌬️" },
+                  ].map((w) => (
+                    <div key={w.label}
+                      className="bg-[#f3f8f3] rounded-2xl p-3 text-center border border-green-100">
+                      <div className="text-xl mb-1 select-none">{w.icon}</div>
+                      <p className="text-sm font-bold text-[#0f3d1a]">{w.value}</p>
+                      <p className="text-xs text-green-700/50 mt-0.5">{w.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 flex items-center gap-2">
+                  <span className="text-lg select-none">⚠️</span>
+                  <p className="text-xs font-medium text-amber-800">
+                    Heavy rain expected tomorrow — plan field operations early.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </motion.div>
 
-          {/* Quick Actions – spans 3 cols */}
+          {/* ── Quick Actions ── */}
           <motion.div {...fadeUp(0.14)} className="lg:col-span-3">
             <div className="h-full bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6">
               <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-5">Quick Actions</p>
@@ -256,10 +350,9 @@ export default function DashboardPage() {
                       whileHover={{ scale: 1.04, y: -2 }}
                       whileTap={{ scale: 0.97 }}
                       className={`relative overflow-hidden flex flex-col items-center justify-center gap-3 text-center
-                        bg-linear-to-br ${action.color} ${action.shadow}
-                        shadow-lg rounded-2xl p-5 cursor-pointer h-full min-h-35 transition-shadow duration-200`}
+                        bg-gradient-to-br ${action.color} ${action.shadow}
+                        shadow-lg rounded-2xl p-5 cursor-pointer h-full min-h-[140px] transition-shadow duration-200`}
                     >
-                      {/* bubble */}
                       <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/10 rounded-full pointer-events-none" />
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
                         {action.icon}
@@ -281,7 +374,7 @@ export default function DashboardPage() {
         ════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-          {/* Alerts – 2 cols */}
+          {/* ── Alerts ── */}
           <motion.div {...fadeUp(0.2)} className="lg:col-span-2">
             <div className="h-full bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6">
               <div className="flex items-center justify-between mb-5">
@@ -290,7 +383,6 @@ export default function DashboardPage() {
                   {alerts.length}
                 </span>
               </div>
-
               <div className="space-y-3">
                 {alerts.map((alert) => {
                   const bg = alert.type === "danger"
@@ -316,7 +408,7 @@ export default function DashboardPage() {
             </div>
           </motion.div>
 
-          {/* Recent Activity – 3 cols */}
+          {/* ── Recent Disease Reports ── */}
           <motion.div {...fadeUp(0.26)} className="lg:col-span-3">
             <div className="h-full bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6">
               <div className="flex items-center justify-between mb-5">
@@ -327,16 +419,35 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              {/* Table header (desktop) */}
-              <div className="hidden sm:grid grid-cols-4 text-xs font-bold uppercase tracking-wider text-green-700/50 px-3 mb-2">
-                <span>Crop</span>
-                <span>Disease</span>
-                <span>Severity</span>
-                <span>Status</span>
-              </div>
+              {/* Table header — only show when data is loaded */}
+              {!loadingReports && reports.length > 0 && (
+                <div className="hidden sm:grid grid-cols-4 text-xs font-bold uppercase tracking-wider text-green-700/50 px-3 mb-2">
+                  <span>Crop</span>
+                  <span>Disease</span>
+                  <span>Severity</span>
+                  <span>Status</span>
+                </div>
+              )}
 
               <div className="space-y-2.5">
-                {recentActivity.map((item, i) => (
+                {/* ── Skeleton rows while loading ── */}
+                {loadingReports &&
+                  [...Array(4)].map((_, i) => (
+                    <TableRowSkeleton key={i} />
+                  ))
+                }
+
+                {/* ── Empty state ── */}
+                {!loadingReports && reports.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                    <span className="text-4xl select-none">🌿</span>
+                    <p className="font-bold text-green-900/70 text-sm">No reports yet</p>
+                    <p className="text-xs text-green-700/40">Upload a crop image to get started</p>
+                  </div>
+                )}
+
+                {/* ── Data rows ── */}
+                {!loadingReports && reports.map((item, i) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, x: -16 }}
@@ -345,7 +456,7 @@ export default function DashboardPage() {
                     whileHover={{ scale: 1.01, backgroundColor: "#f8fdf8" }}
                     className="rounded-2xl border border-green-50 bg-[#fafffe] p-3 sm:p-0 sm:bg-transparent sm:border-0 transition-all duration-150"
                   >
-                    {/* Mobile card layout */}
+                    {/* Mobile */}
                     <div className="sm:hidden space-y-1.5">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-[#0f3d1a]">{item.crop}</p>
@@ -354,11 +465,13 @@ export default function DashboardPage() {
                       <p className="text-sm text-green-900/60">{item.disease}</p>
                       <div className="flex items-center justify-between">
                         <StatusBadge status={item.status} />
-                        <p className="text-xs text-green-700/40">{item.date}</p>
+                        <p className="text-xs text-green-700/40">
+                          {item.createdAt ? new Date(item.createdAt).toDateString() : item.date}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Desktop row layout */}
+                    {/* Desktop */}
                     <div className="hidden sm:grid grid-cols-4 items-center px-3 py-3 rounded-2xl hover:bg-[#f3f8f3] transition-colors">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center text-xs shrink-0">
@@ -366,7 +479,9 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-[#0f3d1a]">{item.crop}</p>
-                          <p className="text-xs text-green-700/40">{item.date}</p>
+                          <p className="text-xs text-green-700/40">
+                            {item.createdAt ? new Date(item.createdAt).toDateString() : item.date}
+                          </p>
                         </div>
                       </div>
                       <p className="text-sm text-green-900/70 truncate pr-2">{item.disease}</p>
@@ -380,47 +495,7 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* ════════════════════════════════════
-            4. FARM HEALTH SUMMARY BAR
-        ════════════════════════════════════ */}
-        <motion.div {...fadeUp(0.34)}>
-          <div className="bg-white rounded-3xl shadow-md shadow-green-100 border border-green-100 p-6">
-            <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-6">
-              Farm Health Overview
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-              {[
-                { label: "Soil Health",    score: 82, color: "bg-green-500",  emoji: "🌱" },
-                { label: "Crop Coverage",  score: 91, color: "bg-lime-500",   emoji: "🌾" },
-                { label: "Pest Risk",      score: 34, color: "bg-red-400",    emoji: "🐛" },
-                { label: "Irrigation",     score: 67, color: "bg-blue-400",   emoji: "💧" },
-              ].map((metric) => (
-                <div key={metric.label} className="space-y-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base select-none">{metric.emoji}</span>
-                      <p className="text-xs font-semibold text-green-900/70">{metric.label}</p>
-                    </div>
-                    <p className="text-sm font-black text-[#0f3d1a]"
-                      style={{ fontFamily: "'Syne', sans-serif" }}>
-                      {metric.score}%
-                    </p>
-                  </div>
-                  <div className="w-full bg-green-100 rounded-full h-2 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${metric.score}%` }}
-                      transition={{ duration: 0.9, delay: 0.4, ease: "easeOut" }}
-                      className={`h-2 rounded-full ${metric.color}`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Footer note */}
+        {/* Footer */}
         <motion.p {...fadeUp(0.4)}
           className="text-center text-xs text-green-700/30 pb-4">
           Agro Vision — AI-Powered Smart Farming · Data refreshed every 30 minutes

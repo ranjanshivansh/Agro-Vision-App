@@ -221,7 +221,7 @@ export default function SignUpPage() {
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
-                    placeholder="e.g. Vellore, Tamil Nadu"
+                    placeholder="e.g. Chennai, Tamil Nadu"
                     required
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#c8e6c9] bg-[#f1f8e9]/60 text-[#1a3a1a] placeholder-[#a5d6a7] text-sm focus:outline-none focus:ring-2 focus:ring-[#4caf50]/40 focus:border-[#4caf50] transition-all duration-200"
                   />
